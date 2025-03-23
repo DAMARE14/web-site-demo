@@ -1,0 +1,46 @@
+// backend.js (Node.js + Express + NLP.js)
+
+const express = require("express");
+const bodyParser = require("body-parser");
+const cors = require("cors");
+const { NlpManager } = require("node-nlp");
+
+const app = express();
+const port = 5000;
+
+app.use(bodyParser.json());
+app.use(cors());
+
+// Initialize NLP Manager
+const manager = new NlpManager({ languages: ["en"] });
+
+// Train chatbot with basic intents
+manager.addDocument("en", "hello", "greeting");
+manager.addDocument("en", "hi", "greeting");
+manager.addDocument("en", "how are you", "greeting");
+manager.addDocument("en", "what is your name", "bot.name");
+manager.addDocument("en", "who created you", "bot.creator");
+manager.addDocument("en", "bye", "goodbye");
+
+manager.addAnswer("en", "greeting", "Hello! How can I assist you today?");
+manager.addAnswer("en", "bot.name", "I am your chatbot assistant.");
+manager.addAnswer("en", "bot.creator", "I was created to assist users like you!");
+manager.addAnswer("en", "goodbye", "Goodbye! Have a great day.");
+
+// Train the NLP model
+(async () => {
+    await manager.train();
+    manager.save();
+})();
+
+// Chatbot API route
+app.post("/chat", async (req, res) => {
+    const { message } = req.body;
+    const response = await manager.process("en", message);
+    res.json({ response: response.answer || "I'm sorry, I don't understand." });
+});
+
+// Start server
+app.listen(port, () => {
+    console.log(`Chatbot server running on http://localhost:${port}`);
+});
